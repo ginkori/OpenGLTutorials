@@ -1,0 +1,26 @@
+Debug/
+
+*.suo
+*~
+*.user
+*.aps
+*.ipch
+*.pdb
+*.ilk
+*.exe
+*.swp
+
+# Compiled output
+ingredients/libingredients.a
+chapter??/chapter??
+chapter??/chapter??.exe
+
+.idea/
+*.cbp
+
+# Visual Studio projects, solutions, build folders, etc.
+*.vcxproj
+*.sln
+*.vcxproj.filters
+.vs/
+x64/
