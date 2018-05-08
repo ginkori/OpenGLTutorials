@@ -44,6 +44,7 @@ int main()
 		return -1;
 	}
 
+	// Посмотреть версии
 	const GLubyte *renderer = glGetString(GL_RENDERER);
 	const GLubyte *vendor = glGetString(GL_VENDOR);
 	const GLubyte *version = glGetString(GL_VERSION);
@@ -64,7 +65,7 @@ int main()
 
 
 	// Build and compile our shader program
-	Shader ourShader("Shaders/default.vs", "Shaders/default.frag");
+	Shader ourShader("Shaders/default.vs", "Shaders/default.fs");
 
 
 	// Set up vertex data (and buffer(s)) and attribute pointers

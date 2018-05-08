@@ -6,7 +6,6 @@
 #include <sstream>
 #include <iostream>
 
-// Теперь glad
 #include <glad/glad.h>;
 
 class Shader
