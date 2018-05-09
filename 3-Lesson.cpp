@@ -3,6 +3,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "shader_class.h"
+// Test glm 0.9.9
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -37,9 +41,9 @@ int main()
 
 	GLfloat vertices[] = {
 		// Positions         // Colors          //Text. coord.
-		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  2.0f, 0.0f, // Bottom Right
+		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f, // Bottom Right
 		-0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,// Bottom Left
-		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 2.0f // Top 
+		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.5f, 1.0f // Top 
 	};
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
@@ -68,8 +72,8 @@ int main()
 	// Bind it
 	glBindTexture(GL_TEXTURE_2D, texture1);
 	// Set the texture wrapping/filtering options
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// Load image and gen a texture
@@ -118,16 +122,23 @@ int main()
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
+		// Set the transformation matrix
+		glm::mat4 trans = glm::mat4(1.0f);
+		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+		trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+		trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
 		// Bind, it will assign the texture to the fragment shader's sampler
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture1);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
-		// Set the teture mix value in the shader
+		// Set the texture mix value in the shader
 		glUniform1f(glGetUniformLocation(ourShader.Program, "mixValue"), mixValue);
-		// Draw the triangle
+		// Trans matrix uniform
 		ourShader.Use();
+		unsigned int transformLoc = glGetUniformLocation(ourShader.Program, "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		// Draw the triangle
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glBindVertexArray(0);
@@ -167,3 +178,5 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
 }
+
+//From that version glm it is required to initialize matrix types as: glm::mat4 mat = glm::mat4(1.0f)

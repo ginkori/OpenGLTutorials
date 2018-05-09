@@ -7,10 +7,11 @@ out vec3 ourColor;
 out vec2 texCoord;
 
 uniform float xOffset;
+uniform mat4 transform;
 
 void main()
 {
-    gl_Position = vec4(position.x + xOffset, position.y + xOffset, position.z + xOffset, 1.0f);
+    gl_Position = transform * vec4(position.x + xOffset, position.y + xOffset, position.z + xOffset, 1.0f);
     ourColor = color;
     texCoord = texture;
 }
