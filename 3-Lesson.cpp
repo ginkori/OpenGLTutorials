@@ -9,6 +9,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 const GLuint WIDTH = 800, HEIGHT = 600;
 
+float mixValue = 0.2f;
+
 int main()
 {
 	glfwInit();
@@ -106,7 +108,7 @@ int main()
 	stbi_image_free(data);
 
 	ourShader.Use();
-	// Set uniform
+	// Set uniforms
 	float offset = 0.0f;
 	glUniform1f(glGetUniformLocation(ourShader.Program, "xOffset"), offset);
 	glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture1"), 0);
@@ -122,6 +124,8 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texture1);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
+		// Set the teture mix value in the shader
+		glUniform1f(glGetUniformLocation(ourShader.Program, "mixValue"), mixValue);
 		// Draw the triangle
 		ourShader.Use();
 		glBindVertexArray(VAO);
@@ -143,6 +147,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+	{
+		mixValue += 0.1f; 
+		if (mixValue >= 1.0f)
+			mixValue = 1.0f;
+	}
+
+	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+	{
+		mixValue -= 0.1f;
+		if (mixValue <= 0.0f)
+			mixValue = 0.0f;
+	}
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
