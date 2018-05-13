@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "shader_class.h"
-// Test glm 0.9.9
+// glm 0.9.9
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -35,16 +35,42 @@ int main()
 		return -1;
 	}
 
-	//glViewport(0, 0, WIDTH, HEIGHT);
+	glEnable(GL_DEPTH_TEST);
 
-	Shader ourShader("Shaders/for-texture.vs", "Shaders/for-texture.fs");
+	Shader ourShader("Shaders/coord-system.vs", "Shaders/for-texture.fs");
 
 	GLfloat vertices[] = {
 		// Positions         // Colors          //Text. coord.
 		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f, // Bottom Right
-		-0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,// Bottom Left
-		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.5f, 1.0f // Top 
+		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // Bottom Left
+		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.5f, 1.0f, // Top
+
+		0.0f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
+		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f,  0.5f, 1.0f,
+
+		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+		0.0f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f,  0.5f, 1.0f,
+
+		0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
+		-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,  0.5f, 1.0f
 	};
+
+	glm::vec3 triPositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
+	};
+
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -121,12 +147,8 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		// Set the transformation matrix
-		glm::mat4 trans = glm::mat4(1.0f);
-		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-		trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(1.0f, 0.0f, 0.0f));
-		trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		// Bind, it will assign the texture to the fragment shader's sampler
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture1);
@@ -134,13 +156,36 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, texture2);
 		// Set the texture mix value in the shader
 		glUniform1f(glGetUniformLocation(ourShader.Program, "mixValue"), mixValue);
-		// Trans matrix uniform
+
 		ourShader.Use();
-		unsigned int transformLoc = glGetUniformLocation(ourShader.Program, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-		// Draw the triangle
+
+		// View matrix
+		glm::mat4 view = glm::mat4(1.0f);
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -6.0f));
+		// Projection matrix
+		glm::mat4 projection = glm::mat4(1.0f);
+		projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+		// Matrix uniforms
+		int viewLoc = glGetUniformLocation(ourShader.Program, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		int projectionlLoc = glGetUniformLocation(ourShader.Program, "projection");
+		glUniformMatrix4fv(projectionlLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		// Draw triangles
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, triPositions[i]);
+			float angle = glfwGetTime() * i;
+			if (i == 0)
+				angle = glfwGetTime() * 15.0f;
+			model = glm::rotate(model, glm::radians(angle) * 10.0f, glm::vec3(2.0f, 0.5f, 1.0f));
+			int modelLoc = glGetUniformLocation(ourShader.Program, "model");
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+			glDrawArrays(GL_TRIANGLES, 0, 12);
+		}
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
@@ -179,13 +224,3 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
-//From that version glm it is required to initialize matrix types as: glm::mat4 mat = glm::mat4(1.0f)
-//GLfloat offset[] = {(float)sin(glfwGetTime() * 0.5f, (float)sin(glfwGetTime() * 0.6f), 0.0f, 0.0f}
-/*
-//Output interface block example - only for moving data from shader stage to shader stage
-out VS_OUT //block name - use between stages
-{
-	vec4 color;
-} vs_out; //instance name - use in shaders
-//vs_out.color = color;
-*/
