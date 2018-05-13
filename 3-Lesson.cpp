@@ -180,3 +180,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 //From that version glm it is required to initialize matrix types as: glm::mat4 mat = glm::mat4(1.0f)
+//GLfloat offset[] = {(float)sin(glfwGetTime() * 0.5f, (float)sin(glfwGetTime() * 0.6f), 0.0f, 0.0f}
+/*
+//Output interface block example - only for moving data from shader stage to shader stage
+out VS_OUT //block name - use between stages
+{
+	vec4 color;
+} vs_out; //instance name - use in shaders
+//vs_out.color = color;
