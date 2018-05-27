@@ -14,6 +14,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 const GLuint WIDTH = 800, HEIGHT = 600;
 
 float mixValue = 0.2f;
+// For camera
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+// For camera speed
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f; // Time of last frame
 
 int main()
 {
@@ -56,19 +63,6 @@ int main()
 		0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
 		-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,  0.5f, 1.0f
-	};
-
-	glm::vec3 triPositions[] = {
-		glm::vec3(0.0f,  0.0f,  0.0f),
-		glm::vec3(2.0f,  5.0f, -15.0f),
-		glm::vec3(-1.5f, -2.2f, -2.5f),
-		glm::vec3(-3.8f, -2.0f, -12.3f),
-		glm::vec3(2.4f, -0.4f, -3.5f),
-		glm::vec3(-1.7f,  3.0f, -7.5f),
-		glm::vec3(1.3f, -2.0f, -2.5f),
-		glm::vec3(1.5f,  2.0f, -2.5f),
-		glm::vec3(1.5f,  0.2f, -1.5f),
-		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
 	GLuint VBO, VAO;
@@ -140,8 +134,6 @@ int main()
 	}
 	stbi_image_free(data);
 
-
-
 	while (!glfwWindowShouldClose(window))
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -161,17 +153,27 @@ int main()
 		// Matrix uniforms
 		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
 
+		// For camera speed
+		float currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+		// For camera matrix
+		glm::mat4 view = glm::mat4(1.0f);
+		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
 		// Draw triangles
 		glBindVertexArray(VAO);
 		for (unsigned int i = 0; i < 10; i++)
 		{
+			// For mv matrix
 			float f = glfwGetTime() * 3.14159265359 * 0.1 + (float)i;
 			float angle = glfwGetTime();
+
 			glm::mat4 mv = glm::mat4(1.0f);
-			mv = glm::translate(mv, glm::vec3(0.0f, 0.0f, -6.0f));
 			mv = glm::translate(mv, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
 			mv = glm::rotate(mv, glm::radians(angle)*45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 			mv = glm::rotate(mv, glm::radians(angle)*21.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+			mv = view * mv;
 			glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(mv));
 
 			glDrawArrays(GL_TRIANGLES, 0, 12);
@@ -207,6 +209,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		if (mixValue <= 0.0f)
 			mixValue = 0.0f;
 	}
+
+	float cameraSpeed = 15.5f * deltaTime;
+	if (key == GLFW_KEY_W && action == GLFW_PRESS)
+		cameraPos += cameraSpeed * cameraFront;
+	if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		cameraPos -= cameraSpeed * cameraFront;
+	if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	if (key == GLFW_KEY_D && action == GLFW_PRESS)
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
