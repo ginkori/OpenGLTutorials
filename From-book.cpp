@@ -10,6 +10,8 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 const GLuint WIDTH = 800, HEIGHT = 600;
 
@@ -21,6 +23,12 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 // For camera speed
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
+// For mouse movement
+bool firstMouse = true;
+float lastX = 400, lastY = 300;
+float yaw = -90.0f;
+float pitch = 0.0f;
+float fov = 45.0f;
 
 int main()
 {
@@ -35,6 +43,12 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glfwSetKeyCallback(window, key_callback);
+
+	//For mouse
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+	//
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -149,12 +163,12 @@ int main()
 
 		// Projection matrix
 		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
 		// Matrix uniforms
 		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
 
-		// For camera speed
-		float currentFrame = glfwGetTime();
+		// For camera speed - time logic
+		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 		// For camera matrix
@@ -166,8 +180,8 @@ int main()
 		for (unsigned int i = 0; i < 10; i++)
 		{
 			// For mv matrix
-			float f = glfwGetTime() * 3.14159265359 * 0.1 + (float)i;
-			float angle = glfwGetTime();
+			float f = (float)glfwGetTime() * 3.14159265359f * 0.1f + (float)i;
+			float angle = (float)glfwGetTime();
 
 			glm::mat4 mv = glm::mat4(1.0f);
 			mv = glm::translate(mv, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
@@ -219,6 +233,54 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	if (key == GLFW_KEY_D && action == GLFW_PRESS)
 		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	// Prevent a large sudden jump 
+	if (firstMouse)
+	{
+		lastX = (float)xpos;
+		lastY = (float)ypos;
+		firstMouse = false;
+	}
+
+	// Calculate the offset movement between the last and current frame
+	float xoffset = (float)xpos - lastX;
+	// Reversed y-coordinates
+	float yoffset = lastY - (float)ypos;
+	lastX = (float)xpos;
+	lastY = (float)ypos;
+
+	float sensitivity = 0.05f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	// Prevent a weird camera movements 
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	// Calculate the actual direction vector for lookAt
+	glm::vec3 front;
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(front);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (fov >= 1.0f && fov <= 45.0f)
+		fov -= yoffset;
+	if (fov <= 1.0f)
+		fov = 1.0f;
+	if (fov >= 45.0f)
+		fov = 45.0f;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
