@@ -1,9 +1,12 @@
 #include <iostream>
-#include "stb_image.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "stb_image.h"
+
 #include "shader_class.h"
-// glm
+#include "camera_class.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -16,19 +19,15 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 const GLuint WIDTH = 800, HEIGHT = 600;
 
 float mixValue = 0.2f;
-// For camera
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
 // For camera speed
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
-// For mouse movement
+// For mouse movement and camera
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 bool firstMouse = true;
-float lastX = 400, lastY = 300;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float fov = 45.0f;
+float lastX = WIDTH / 2.0f;
+float lastY = HEIGHT / 2.0f;
 
 int main()
 {
@@ -38,17 +37,20 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
 	glfwSetKeyCallback(window, key_callback);
-
-	//For mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	//
+	//For mouse capture
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -99,7 +101,7 @@ int main()
 
 	glBindVertexArray(0);
 
-	//Create a sampler object
+	//Create a sampler object for textures
 	unsigned int sampl;
 	glCreateSamplers(1, &sampl);
 	//Set the parameters for texture
@@ -159,21 +161,22 @@ int main()
 		// Set the texture mix value in the shader
 		glUniform1f(6, mixValue);
 
-		ourShader.Use();
-
-		// Projection matrix
-		glm::mat4 projection = glm::mat4(1.0f);
-		projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-		// Matrix uniforms
-		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
-
 		// For camera speed - time logic
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
-		// For camera matrix
+
+		ourShader.Use();
+
+		// Projection matrix
+		glm::mat4 projection = glm::mat4(1.0f);
+		projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+		// Send it to the shader
+		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
+		
+		// For camera view matrix
 		glm::mat4 view = glm::mat4(1.0f);
-		view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+		view = camera.GetViewMatrix();
 
 		// Draw triangles
 		glBindVertexArray(VAO);
@@ -182,12 +185,13 @@ int main()
 			// For mv matrix
 			float f = (float)glfwGetTime() * 3.14159265359f * 0.1f + (float)i;
 			float angle = (float)glfwGetTime();
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
+			model = glm::rotate(model, glm::radians(angle)*45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+			model = glm::rotate(model, glm::radians(angle)*21.0f, glm::vec3(1.0f, 0.0f, 0.0f));
 
 			glm::mat4 mv = glm::mat4(1.0f);
-			mv = glm::translate(mv, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
-			mv = glm::rotate(mv, glm::radians(angle)*45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-			mv = glm::rotate(mv, glm::radians(angle)*21.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-			mv = view * mv;
+			mv = view * model;
 			glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(mv));
 
 			glDrawArrays(GL_TRIANGLES, 0, 12);
@@ -224,15 +228,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			mixValue = 0.0f;
 	}
 
-	float cameraSpeed = 15.5f * deltaTime;
+	//float cameraSpeed = 15.5f * deltaTime;
 	if (key == GLFW_KEY_W && action == GLFW_PRESS)
-		cameraPos += cameraSpeed * cameraFront;
+		camera.ProcessKeyboard(FORWARD, deltaTime);
 	if (key == GLFW_KEY_S && action == GLFW_PRESS)
-		cameraPos -= cameraSpeed * cameraFront;
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
 	if (key == GLFW_KEY_A && action == GLFW_PRESS)
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.ProcessKeyboard(LEFT, deltaTime);
 	if (key == GLFW_KEY_D && action == GLFW_PRESS)
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
@@ -256,31 +260,12 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
 
-	yaw += xoffset;
-	pitch += yoffset;
-
-	// Prevent a weird camera movements 
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	// Calculate the actual direction vector for lookAt
-	glm::vec3 front;
-	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	front.y = sin(glm::radians(pitch));
-	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	cameraFront = glm::normalize(front);
+	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	if (fov >= 1.0f && fov <= 45.0f)
-		fov -= (float)yoffset;
-	if (fov <= 1.0f)
-		fov = 1.0f;
-	if (fov >= 45.0f)
-		fov = 45.0f;
+	camera.ProcessMouseScroll((float)yoffset);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
