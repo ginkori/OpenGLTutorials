@@ -11,5 +11,5 @@ layout (location = 6) uniform  float mixValue;
 
 void main()
 {
-    color = mix(texture(ourTexture0, texCoord), texture(ourTexture1, vec2(texCoord.x, texCoord.y)), mixValue) * vec4(ourColor, 1.0);
+    color = mix(texture(ourTexture0, texCoord), texture(ourTexture1, vec2(texCoord.x, texCoord.y)), mixValue);// * vec4(ourColor, 1.0);
 }

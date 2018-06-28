@@ -17,6 +17,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 const GLuint WIDTH = 800, HEIGHT = 600;
+GLuint VBO, VAO;
+GLuint texture1, texture2;
 
 float mixValue = 0.2f;
 
@@ -24,10 +26,102 @@ float mixValue = 0.2f;
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 // For mouse movement and camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
+
+void createModel()
+{
+	GLfloat vertices[] = {
+		// Positions         // Colors          //Text. coord.
+		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.5f, 0.0f, // Bottom Right
+		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // Bottom Left
+		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.4f, 1.5f, // Top
+
+		0.0f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.5f, 0.0f,
+		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f,  0.4f, 1.5f,
+
+		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.5f, 0.0f,
+		0.0f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f,  0.4f, 1.5f,
+
+		0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  1.5f, 0.0f,
+		-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,  0.4f, 1.5f
+	};
+
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// Position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+	// Color attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+	// Texture attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBindVertexArray(0);
+};
+
+void loadTexture()
+{
+	//Create a sampler object for textures
+	unsigned int sampl;
+	glCreateSamplers(1, &sampl);
+	//Set the parameters for texture
+	glSamplerParameteri(sampl, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glSamplerParameteri(sampl, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glSamplerParameteri(sampl, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glSamplerParameteri(sampl, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Generate a texture index
+	// 1 - texture
+	glGenTextures(1, &texture1);
+	// Bind it
+	glBindTexture(GL_TEXTURE_2D, texture1);
+	// Set the texture wrapping/filtering options (bind the sampler object)
+	glBindSampler(0, sampl);
+	// Load image and gen a texture
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true);
+	unsigned char *data = stbi_load("Textures/fabric.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		// Create a mipmap for this texture
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	// Free the image memory
+	stbi_image_free(data);
+	// 2 - texture
+	glGenTextures(1, &texture2);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	glBindSampler(1, sampl);
+	data = stbi_load("Textures/pikachu.png", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
+}
 
 int main()
 {
@@ -59,107 +153,15 @@ int main()
 	}
 
 	glEnable(GL_DEPTH_TEST);
+	glClearColor(1.0f, 0.5f, 0.31f, 1.0f);
 
 	Shader ourShader("Shaders/from-book.vs", "Shaders/from-book.fs");
-
-	GLfloat vertices[] = {
-		// Positions         // Colors          //Text. coord.
-		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f, // Bottom Right
-		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // Bottom Left
-		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.5f, 1.0f, // Top
-
-		0.0f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f,  0.5f, 1.0f,
-
-		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-		0.0f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f,  0.5f, 1.0f,
-
-		0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
-		-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,  0.5f, 1.0f
-	};
-
-	GLuint VBO, VAO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	// Position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
-	glEnableVertexAttribArray(0);
-	// Color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
-	// Texture attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	glBindVertexArray(0);
-
-	//Create a sampler object for textures
-	unsigned int sampl;
-	glCreateSamplers(1, &sampl);
-	//Set the parameters for texture
-	glSamplerParameteri(sampl, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glSamplerParameteri(sampl, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glSamplerParameteri(sampl, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glSamplerParameteri(sampl, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// Generate a texture index
-	unsigned int texture1, texture2;
-	// 1 - texture
-	glGenTextures(1, &texture1);
-	// Bind it
-	glBindTexture(GL_TEXTURE_2D, texture1);
-	// Set the texture wrapping/filtering options (bind the sampler object)
-	glBindSampler(0, sampl);
-	// Load image and gen a texture
-	int width, height, nrChannels;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char *data = stbi_load("Textures/container.jpg", &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		// Create a mipmap for this texture
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	// Free the image memory
-	stbi_image_free(data);
-	// 2 - texture
-	glGenTextures(1, &texture2);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-	glBindSampler(1, sampl);
-	data = stbi_load("Textures/awesomeface.png", &width, &height, &nrChannels, 0);
-	if (data)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
+	createModel();
+	loadTexture();
 
 	while (!glfwWindowShouldClose(window))
 	{
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// Bind texture to a texture unit, it will assign the texture to the fragment shader's sampler
-		glBindTextureUnit(0, texture1);
-		glBindTextureUnit(1, texture2);
-		// Set the texture mix value in the shader
-		glUniform1f(6, mixValue);
 
 		// For camera speed - time logic
 		float currentFrame = (float)glfwGetTime();
@@ -167,11 +169,16 @@ int main()
 		lastFrame = currentFrame;
 
 		ourShader.Use();
+		// Bind texture to a texture unit, it will assign the texture to the fragment shader's sampler
+		glBindTextureUnit(0, texture1);
+		glBindTextureUnit(1, texture2);
+		// Set the texture mix value in the shader
+		glUniform1f(6, mixValue);
 
 		// Projection matrix
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-		// Send it to the shader
+		// Send projection matrix to the shader
 		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
 		
 		// For camera view matrix
@@ -183,8 +190,9 @@ int main()
 		for (unsigned int i = 0; i < 10; i++)
 		{
 			// For mv matrix
-			float f = (float)glfwGetTime() * 3.14159265359f * 0.1f + (float)i;
 			float angle = (float)glfwGetTime();
+			float f = angle * 3.14159265359f * 0.1f + (float)i;
+
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
 			model = glm::rotate(model, glm::radians(angle)*45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -192,6 +200,7 @@ int main()
 
 			glm::mat4 mv = glm::mat4(1.0f);
 			mv = view * model;
+
 			glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(mv));
 
 			glDrawArrays(GL_TRIANGLES, 0, 12);
@@ -228,7 +237,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			mixValue = 0.0f;
 	}
 
-	//float cameraSpeed = 15.5f * deltaTime;
 	if (key == GLFW_KEY_W && action == GLFW_PRESS)
 		camera.ProcessKeyboard(FORWARD, deltaTime);
 	if (key == GLFW_KEY_S && action == GLFW_PRESS)
@@ -255,10 +263,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	float yoffset = lastY - (float)ypos;
 	lastX = (float)xpos;
 	lastY = (float)ypos;
-
-	float sensitivity = 0.05f;
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
 
 	camera.ProcessMouseMovement(xoffset, yoffset);
 }
