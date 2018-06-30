@@ -17,10 +17,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 const GLuint WIDTH = 800, HEIGHT = 600;
-GLuint VBO, VAO;
-GLuint texture1, texture2;
-
-float mixValue = 0.2f;
+GLuint VBO, modelVAO, lampVAO;
+//GLuint texture1, texture2;
 
 // For camera speed
 float deltaTime = 0.0f;	// Time between current frame and last frame
@@ -31,47 +29,79 @@ bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 
+// lighting
+glm::vec3 lampPos(1.2f, 1.0f, 2.0f);
+
 void createModel()
 {
-	GLfloat vertices[] = {
-		// Positions         // Colors          //Text. coord.
-		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.5f, 0.0f, // Bottom Right
-		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f, // Bottom Left
-		0.0f,  0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.4f, 1.5f, // Top
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 
-		0.0f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  1.5f, 0.0f,
-		0.5f, -0.5f, 0.0f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f,  0.4f, 1.5f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
 
-		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.5f, 0.0f,
-		0.0f,  0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f,  0.4f, 1.5f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
 
-		0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  1.5f, 0.0f,
-		-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,  0.4f, 1.5f
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
 
-	glGenVertexArrays(1, &VAO);
+	glGenVertexArrays(1, &modelVAO);
 	glGenBuffers(1, &VBO);
 
-	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+	glBindVertexArray(modelVAO);
+
 	// Position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
-	// Color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	// Normal attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
-	// Texture attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
+	
+	glGenVertexArrays(1, &lampVAO);
+	glBindVertexArray(lampVAO);
+	// Position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
 
-	glBindVertexArray(0);
+	//glBindVertexArray(0);
 };
-
+/*
 void loadTexture()
 {
 	//Create a sampler object for textures
@@ -122,7 +152,7 @@ void loadTexture()
 	}
 	stbi_image_free(data);
 }
-
+*/
 int main()
 {
 	glfwInit();
@@ -153,11 +183,12 @@ int main()
 	}
 
 	glEnable(GL_DEPTH_TEST);
-	glClearColor(1.0f, 0.5f, 0.31f, 1.0f);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-	Shader ourShader("Shaders/5-from-book.vs", "Shaders/5-from-book.fs");
+	Shader lightingShader("Shaders/6-model.vs", "Shaders/6-model.fs");
+	Shader lampShader("Shaders/6-lamp.vs", "Shaders/6-lamp.fs");
 	createModel();
-	loadTexture();
+	//loadTexture();
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -168,51 +199,54 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		ourShader.Use();
-		// Bind texture to a texture unit, it will assign the texture to the fragment shader's sampler
-		glBindTextureUnit(0, texture1);
-		glBindTextureUnit(1, texture2);
-		// Set the texture mix value in the shader
-		glUniform1f(6, mixValue);
+		// Mawaru-mawaru
+		lampPos.x = 1.0f + (float)sin(glfwGetTime()) * 2.0f;
+		lampPos.y = (float)sin(glfwGetTime() / 2.0f) * 1.0f;
+
+		lightingShader.Use();
+		glUniform3f(7, 1.0f, 0.5f, 0.31f);
+		glUniform3f(8, 1.0f, 1.0f, 1.0f);
+		glUniform3fv(3, 1, &lampPos[0]);
 
 		// Projection matrix
 		glm::mat4 projection = glm::mat4(1.0f);
 		projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
-		// Send projection matrix to the shader
-		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(projection));
-		
-		// For camera view matrix
+		glUniformMatrix4fv(6, 1, GL_FALSE, glm::value_ptr(projection));
+
+		// Camera view matrix
 		glm::mat4 view = glm::mat4(1.0f);
 		view = camera.GetViewMatrix();
+		glUniformMatrix4fv(5, 1, GL_FALSE, glm::value_ptr(view));
 
-		// Draw triangles
-		glBindVertexArray(VAO);
-		for (unsigned int i = 0; i < 10; i++)
-		{
-			// For mv matrix
-			float angle = (float)glfwGetTime();
-			float f = angle * 3.14159265359f * 0.1f + (float)i;
+		// World transformation
+		glm::mat4 model = glm::mat4(1.0f);
+		glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(model));
 
-			glm::mat4 model = glm::mat4(1.0f);
-			model = glm::translate(model, glm::vec3(sinf(2.1f*f)*2.0f, cosf(1.7f*f)*2.0f, sinf(1.3f*f)*cosf(1.5f*f)*2.0f));
-			model = glm::rotate(model, glm::radians(angle)*45.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-			model = glm::rotate(model, glm::radians(angle)*21.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		// Draw cube
+		glBindVertexArray(modelVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-			glm::mat4 mv = glm::mat4(1.0f);
-			mv = view * model;
+		// Draw the lamp object
+		lampShader.Use();
+		glUniformMatrix4fv(9, 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(8, 1, GL_FALSE, glm::value_ptr(view));
 
-			glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(mv));
+		model = glm::translate(model, lampPos);
+		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+		glUniformMatrix4fv(7, 1, GL_FALSE, glm::value_ptr(model));
 
-			glDrawArrays(GL_TRIANGLES, 0, 12);
-		}
-		glBindVertexArray(0);
+		glBindVertexArray(lampVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
+		//glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	// de-allocate all resources
-	glDeleteVertexArrays(1, &VAO);
+	glDeleteVertexArrays(1, &modelVAO);
+	glDeleteVertexArrays(1, &lampVAO);
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	return 0;
@@ -223,19 +257,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 
-	if (key == GLFW_KEY_UP && action == GLFW_PRESS)
-	{
-		mixValue += 0.1f;
-		if (mixValue >= 1.0f)
-			mixValue = 1.0f;
-	}
-
-	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
-	{
-		mixValue -= 0.1f;
-		if (mixValue <= 0.0f)
-			mixValue = 0.0f;
-	}
 
 	if (key == GLFW_KEY_W && action == GLFW_PRESS)
 		camera.ProcessKeyboard(FORWARD, deltaTime);
