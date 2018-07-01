@@ -31,6 +31,7 @@ float lastY = HEIGHT / 2.0f;
 
 // lighting
 glm::vec3 lampPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lampColor(1.0f, 1.0f, 1.0f);
 
 void createModel()
 {
@@ -203,10 +204,25 @@ int main()
 		lampPos.x = 1.0f + (float)sin(glfwGetTime()) * 2.0f;
 		lampPos.y = (float)sin(glfwGetTime() / 2.0f) * 1.0f;
 
+		/* Dance!
+		lampColor.x = (float)sin(glfwGetTime() * 2.0f);
+		lampColor.y = (float)sin(glfwGetTime() * 0.7f);
+		lampColor.z = (float)sin(glfwGetTime() * 1.3f);
+		
+		glm::vec3 diffuseColor = lampColor * glm::vec3(0.5f); // decrease the influence
+		glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f); // low influence
+		*/
+
 		lightingShader.Use();
-		glUniform3f(7, 1.0f, 0.5f, 0.31f);
-		glUniform3f(8, 1.0f, 1.0f, 1.0f);
 		glUniform3fv(3, 1, &lampPos[0]);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "u_material.ambient"), 0.1745f, 0.01175f, 0.01175f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "u_material.diffuse"), 0.61424f, 0.04136f, 0.04136f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "u_material.specular"), 0.727811f, 0.626959f, 0.626959f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "u_material.shininess"), 32.0f);
+
+		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.ambient"), 1, &lampColor[0]);
+		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.diffuse"), 1, &lampColor[0]);
+		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.specular"), 1, &lampColor[0]);
 
 		// Projection matrix
 		glm::mat4 projection = glm::mat4(1.0f);
@@ -228,6 +244,7 @@ int main()
 
 		// Draw the lamp object
 		lampShader.Use();
+		glUniform3fv(6, 1, &lampColor[0]);
 		glUniformMatrix4fv(9, 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(8, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -237,8 +254,6 @@ int main()
 
 		glBindVertexArray(lampVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		//glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
