@@ -29,6 +29,7 @@ void main()
 
 	vec3 norm = normalize(v_normal);
 	vec3 light_dir = normalize(v_light_pos - v_pos);
+    //vec3 light_dir = normalize(-u_light.direction);
 	float diff = max(dot(norm, light_dir), 0.0);
 	vec3 diffuse = u_light.diffuse * diff * vec3(texture(u_diffuse, v_TexCoords)); 
 	

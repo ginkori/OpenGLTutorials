@@ -24,14 +24,14 @@ GLuint diffuseMap, specularMap, emissionMap;
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
 // For mouse movement and camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 2.0f));
 bool firstMouse = true;
 float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 
 // lighting
-glm::vec3 lampPos(1.2f, 1.0f, 2.0f);
-glm::vec3 lampColor(1.0f, 1.0f, 1.0f);
+glm::vec3 lampPos(-0.8f, -0.5f, 0.1f);
+glm::vec3 lampColor(1.0f, 1.0f, 0.2f);
 
 void createModel()
 {
@@ -214,7 +214,7 @@ int main()
 		lastFrame = currentFrame;
 
 		// Mawaru-mawaru
-		lampPos.x = 1.0f + (float)sin(glfwGetTime()) * 2.0f;
+		lampPos.z = 1.0f + (float)sin(glfwGetTime()) * 2.0f;
 		lampPos.y = (float)sin(glfwGetTime() / 2.0f) * 1.0f;
 
 		lightingShader.Use();
@@ -222,10 +222,12 @@ int main()
 		glBindTextureUnit(0, diffuseMap);
 		glBindTextureUnit(1, specularMap);
 		glBindTextureUnit(2, emissionMap);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "u_material.shininess"), 32.0f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "u_material.shininess"), 128.0f);
 
+		//glm::vec3 dir(-0.2f, -1.0f, -0.3f);
 		glm::vec3 amb(0.2f, 0.2f, 0.2f);
-		glm::vec3 dif(0.5f, 0.5f, 0.5f);
+		glm::vec3 dif(0.8f, 0.8f, 0.8f);
+		//glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.direction"), 1, &dir[0]);
 		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.ambient"), 1, &amb[0]);
 		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.diffuse"), 1, &dif[0]);
 		glUniform3fv(glGetUniformLocation(lightingShader.Program, "u_light.specular"), 1, &lampColor[0]);
