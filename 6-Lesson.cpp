@@ -18,6 +18,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 const GLuint WIDTH = 800, HEIGHT = 600;
 GLuint VBO, modelVAO, lampVAO;
+GLuint posBuf, velBuf, partVAO;
 GLuint diffuseMap, specularMap, emissionMap;
 
 // For camera speed
@@ -103,7 +104,57 @@ void createModel()
 	// Position attribute
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
 };
+
+void createPartSys()
+{
+	float particles[] = { 
+		0.8f, 0.5f, 0.1f, 1.0f,
+		-0.8f, -0.5f, 0.1f, 1.0f,
+		0.8f, -0.5f, 0.1f, 1.0f,
+		-0.8f, 0.5f, 0.1f, 1.0f,
+		0.8f, -1.5f, 0.1f, 1.0f,
+		-1.8f, -0.5f, 0.1f, 1.0f,
+		-0.8f, -0.5f, 1.1f, 1.0f,
+		-0.8f, -0.5f, 2.1f, 1.0f,
+		0.8f, 1.5f, 0.1f, 1.0f,
+		-0.2f, -0.2f, 0.1f, 1.0f,
+		0.8f, -0.5f, -1.1f, 1.0f
+	};
+
+	float velocities[] = {
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f
+	};
+
+	glGenBuffers(1, &posBuf);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, posBuf);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+
+	glGenBuffers(1, &velBuf);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, velBuf);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(particles), particles, GL_DYNAMIC_DRAW);
+
+	glGenVertexArrays(1, &partVAO);
+	glBindVertexArray(partVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, posBuf);
+
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+	
+	glBindVertexArray(0);
+}
 
 void loadTexture()
 {
@@ -198,10 +249,14 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Shader lightingShader("Shaders/6-model.vs", "Shaders/6-model.fs");
 	Shader lampShader("Shaders/6-lamp.vs", "Shaders/6-lamp.fs");
+	Shader partShader("Shaders/6-part_s.cs");
 	createModel();
+	createPartSys();
 	loadTexture();
 
 	while (!glfwWindowShouldClose(window))
@@ -262,6 +317,27 @@ int main()
 
 		glBindVertexArray(lampVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// Mini particle system
+		partShader.Use();
+		glUniform3fv(0, 1, &lampPos[0]);
+		glUniform3fv(1, 1, &lampPos[0]);
+		glDispatchCompute(1, 1, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		lampShader.Use();
+		glUniform3fv(6, 1, &lampColor[0]);
+		glUniformMatrix4fv(9, 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(8, 1, GL_FALSE, glm::value_ptr(view));
+		// model = glm::mat4(1.0f);
+		// model = glm::scale(model, glm::vec3(4.0f));
+		model = glm::translate(model, lampPos);
+		glUniformMatrix4fv(7, 1, GL_FALSE, glm::value_ptr(model));
+
+		glBindVertexArray(partVAO);
+		glPointSize(5.0f);
+		glDrawArrays(GL_POINTS, 0, 11);
+
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

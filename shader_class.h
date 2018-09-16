@@ -92,6 +92,66 @@ public:
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
 	}
+	// Конструктор для вычислительного шейдера
+	Shader(const GLchar* computePath)
+	{
+		// 1. Получаем исходный код шейдера из filePath
+		std::string computeCode;
+		std::ifstream cShaderFile;
+
+		// Удостоверимся, что ifstream объекты могут выкидывать исключения
+		cShaderFile.exceptions(std::ifstream::badbit);
+		try
+		{
+			// Открываем файлы
+			cShaderFile.open(computePath);
+			std::stringstream cShaderStream;
+			// Считываем данные в потоки
+			cShaderStream << cShaderFile.rdbuf();
+			// Закрываем файлы
+			cShaderFile.close();
+			// Преобразовываем потоки в массив GLchar
+			computeCode = cShaderStream.str();
+		}
+		catch (std::ifstream::failure e)
+		{
+			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+		}
+		const GLchar* cShaderCode = computeCode.c_str();
+
+		// 2. Сборка шейдеров
+		GLuint compute;
+		GLint success;
+		GLchar infoLog[512];
+
+		// Вершинный шейдер
+		compute = glCreateShader(GL_COMPUTE_SHADER);
+		glShaderSource(compute, 1, &cShaderCode, NULL);
+		glCompileShader(compute);
+		// Если есть ошибки - вывести их
+		glGetShaderiv(compute, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			glGetShaderInfoLog(compute, 512, NULL, infoLog);
+			std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+		};
+
+		// Шейдерная программа
+		this->Program = glCreateProgram();
+		glAttachShader(this->Program, compute);
+		glLinkProgram(this->Program);
+		//Если есть ошибки - вывести их
+		glGetProgramiv(this->Program, GL_LINK_STATUS, &success);
+		if (!success)
+		{
+			glGetProgramInfoLog(this->Program, 512, NULL, infoLog);
+			std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+		}
+
+		// Удаляем шейдеры, поскольку они уже в программе и нам больше не нужны.
+		glDeleteShader(compute);
+	}
+
 	// Включить шейдер для использования
 	void Use()
 	{
